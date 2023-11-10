@@ -22,6 +22,9 @@ fun main() = application {
             TristateCheckButton("Check", if (sel) ToggleableState.Indeterminate else ToggleableState.Off, { sel = !sel })
             var idx by remember { mutableStateOf(0) }
             ComboButton((0..10).map { "Item $it" }, idx, { idx = it })
+            var rat by remember { mutableStateOf(0f) }
+            Slider(rat) { rat = it }
+            ProgressBar(rat)
         }
     }
 }

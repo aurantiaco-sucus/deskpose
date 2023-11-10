@@ -3,9 +3,15 @@ package xyz.midnight233.deskpose
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.onDrag
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.*
@@ -130,6 +136,7 @@ private fun DeskposeBooleanButton(
     caption: String,
     selected: Boolean,
     onClick: () -> Unit,
+    shape: Shape = RoundedCornerShape(50),
     modifier: Modifier = Modifier,
     graphic: DrawScope.(Float, Color) -> Unit
 ) {
@@ -138,7 +145,7 @@ private fun DeskposeBooleanButton(
     DeskposeClickable(
         onClick = onClick,
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(50),
+        shape = shape,
         modifier = modifier
     ) {
         Row(
@@ -160,7 +167,7 @@ private fun DeskposeBooleanButton(
 
 @Composable
 fun RadioButton(caption: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    DeskposeBooleanButton(caption, selected, onClick, modifier) { radius, activeColor ->
+    DeskposeBooleanButton(caption, selected, onClick, modifier = modifier) { radius, activeColor ->
         drawCircle(
             color = Color(0xFFD0D0D0),
             radius = radius,
@@ -187,7 +194,18 @@ private fun deskposeCheckButtonTickPath(origin: Float, radius: Float) = Path().r
 
 @Composable
 fun CheckButton(caption: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    DeskposeBooleanButton(caption, selected, onClick, modifier) { radius, activeColor ->
+    DeskposeBooleanButton(
+        caption,
+        selected,
+        onClick,
+        RoundedCornerShape(
+            topStartPercent = 20,
+            bottomStartPercent = 20,
+            topEndPercent = 50,
+            bottomEndPercent = 50
+        ),
+        modifier
+    ) { radius, activeColor ->
         drawRect(
             color = Color(0xFFD0D0D0),
             topLeft = Offset.Zero,
@@ -216,7 +234,12 @@ fun TristateCheckButton(
     DeskposeClickable(
         onClick = onClick,
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(
+            topStartPercent = 20,
+            bottomStartPercent = 20,
+            topEndPercent = 50,
+            bottomEndPercent = 50
+        ),
         modifier = modifier
     ) {
         Row(
@@ -336,4 +359,82 @@ fun HintDot(activated: Boolean, color: Color, caption: String) {
             )
         }
     }
+}
+
+@Composable
+fun Slider(value: Float, width: Dp = 150.dp, height: Dp = 20.dp, knobWidth: Dp = 20.dp, onValueChange: (Float) -> Unit) {
+    val gapAmount = 0.dp
+    val availWidth = width.value - knobWidth.value
+    require(value in 0f..1f)
+    var currentDrag by remember { mutableStateOf(value) }
+    val state = rememberDraggableState {
+        currentDrag += it / availWidth
+        val newValue = currentDrag.coerceIn(0f..1f)
+        if (newValue != value) onValueChange(newValue)
+    }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val knobColor by animateColorAsState(if (isFocused || isHovered) Color(0xFFD0D0D0) else Color(0xFFE8E8E8))
+    Box(
+        modifier = Modifier
+            .size(width = width, height = height)
+    ) {
+        Canvas(
+            modifier = Modifier
+                .size(width = width, height = height),
+        ) {
+            drawLine(
+                color = Color(0xFFA0A0A0),
+                start = Offset(height.value / 2, height.value / 2),
+                end = Offset(width.value - height.value / 2, height.value / 2),
+                strokeWidth = 2f
+            )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .size(width = width, height = height)
+        ) {
+            Spacer(modifier = Modifier.width(value * availWidth.dp + gapAmount))
+            DeskposeUnclickable(
+                shape = CircleShape,
+                color = knobColor,
+                modifier = Modifier
+                    .size(height = height - gapAmount * 2f, width = knobWidth - gapAmount * 2f)
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = state,
+                        onDragStarted = {
+                            currentDrag = value
+                        }
+                    )
+                    .focusable(interactionSource = interactionSource)
+                    .hoverable(interactionSource)
+            ) {}
+        }
+    }
+}
+
+@Composable
+fun ProgressBar(value: Float, modifier: Modifier = Modifier.width(150.dp)) {
+    DeskposeUnclickable(
+        shape = RoundedCornerShape(50),
+        color = Color(0xFFF0F0F0),
+        modifier = Modifier
+            .height(10.dp)
+            .then(modifier)
+    ) {
+        DeskposeUnclickable(
+            color = Color(0xFFA0A0A0),
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(value)
+        ) {}
+    }
+}
+
+@Composable
+fun TabView(selected: Int, captions: List<String>, content: @Composable (Int) -> Unit) {
+    
 }
