@@ -27,8 +27,12 @@ fun main() = application {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button("Button", {})
+                            OutlineButton("Button", {})
                             HintDot(sel, Color.Red, "Hint")
                         }
+                        var text by remember { mutableStateOf("") }
+                        TextField(value = text, onValueChange = { text = it })
+                        OutlineTextField(value = text, onValueChange = { text = it })
                         RadioButton("Radio", sel, { sel = !sel })
                         CheckButton("Check", sel, { sel = !sel })
                         TristateCheckButton("Check", if (sel) ToggleableState.Indeterminate else ToggleableState.Off, { sel = !sel })

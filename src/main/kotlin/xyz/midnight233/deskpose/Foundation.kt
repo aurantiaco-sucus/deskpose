@@ -12,10 +12,8 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -28,9 +26,49 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.isContainer
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+
+private fun deskposeStaticPath(builder: Path.() -> Unit) = Path().run { this.builder(); return@run this }
+
+private fun deskposeGrayscale(gray: Float) = Color(red = gray, green = gray, blue = gray)
+
+private val deskposeFocusedOutlineColor = deskposeGrayscale(0.75f)
+private val deskposeOutlineColor = deskposeGrayscale(0.8f)
+private val deskposeUnfocusedOutlineColor = deskposeGrayscale(0.85f)
+
+private val deskposeFocusedTinySurfaceColor = deskposeGrayscale(0.8f)
+private val deskposeTinySurfaceColor = deskposeGrayscale(0.85f)
+private val deskposeUnfocusedTinySurfaceColor = deskposeGrayscale(0.9f)
+
+private val deskposeSelectedSmallSurfaceColor = deskposeGrayscale(0.8f)
+private val deskposeFocusedSmallSurfaceColor = deskposeGrayscale(0.85f)
+private val deskposeSmallSurfaceColor = deskposeGrayscale(0.9f)
+private val deskposeUnfocusedSmallSurfaceColor = deskposeGrayscale(0.95f)
+
+private val deskposeSelectedSurfaceColor = deskposeGrayscale(0.875f)
+private val deskposeFocusedSurfaceColor = deskposeGrayscale(0.925f)
+private val deskposeSurfaceColor = deskposeGrayscale(0.95f)
+private val deskposeUnfocusedSurfaceColor = deskposeGrayscale(0.975f)
+
+private val deskposeDefaultShape = CircleShape
+
+val tipTextStyle = TextStyle(
+    color = Color.Black,
+    fontSize = 12.sp,
+    fontWeight = FontWeight.Medium
+)
+val labelTextStyle = TextStyle(
+    color = Color.Black,
+    fontSize = 14.sp
+)
+val headingTextStyle = TextStyle(
+    color = Color(0xFF606060),
+    fontSize = 24.sp
+)
 
 @Composable
 private fun DeskposeClickable(
@@ -38,29 +76,24 @@ private fun DeskposeClickable(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     shape: Shape = RectangleShape,
-    color: Color = MaterialTheme.colors.surface,
-    contentColor: Color = contentColorFor(color),
+    color: Color = Color.White,
     border: BorderStroke? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable () -> Unit
 ) {
-    CompositionLocalProvider(
-        LocalContentColor provides contentColor
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(color)
+            .border(border ?: BorderStroke(0.dp, Color.Transparent), shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = rememberRipple(),
+                enabled = enabled,
+                onClick = onClick
+            )
     ) {
-        Box(
-            modifier = modifier
-                .clip(shape)
-                .background(color)
-                .border(border ?: BorderStroke(0.dp, Color.Transparent), shape)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = rememberRipple(),
-                    enabled = enabled,
-                    onClick = onClick
-                )
-        ) {
-            content()
-        }
+        content()
     }
 }
 
@@ -68,26 +101,21 @@ private fun DeskposeClickable(
 private fun DeskposeUnclickable(
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
-    color: Color = MaterialTheme.colors.surface,
-    contentColor: Color = contentColorFor(color),
+    color: Color = Color.White,
     border: BorderStroke? = null,
     content: @Composable () -> Unit
 ) {
-    CompositionLocalProvider(
-        LocalContentColor provides contentColor
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(color)
+            .border(border ?: BorderStroke(0.dp, Color.Transparent), shape)
+            .semantics(mergeDescendants = false) {
+                isContainer = true
+            }
+            .pointerInput(Unit) {}
     ) {
-        Box(
-            modifier = modifier
-                .clip(shape)
-                .background(color)
-                .border(border ?: BorderStroke(0.dp, Color.Transparent), shape)
-                .semantics(mergeDescendants = false) {
-                    isContainer = true
-                }
-                .pointerInput(Unit) {}
-        ) {
-            content()
-        }
+        content()
     }
 }
 
@@ -99,17 +127,11 @@ fun Button(
 ) {
     DeskposeClickable(
         onClick = onClick,
-        shape = RoundedCornerShape(50),
-        color = Color(0xFFE8E8E8),
-        contentColor = Color.Black,
+        shape = deskposeDefaultShape,
+        color = deskposeSurfaceColor,
         modifier = modifier
     ) {
-        Text(
-            text = caption,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 5.dp)
-        )
+        PaddedLabel(caption)
     }
 }
 
@@ -121,15 +143,51 @@ fun CustomButton(
 ) {
     DeskposeClickable(
         onClick = onClick,
-        shape = RoundedCornerShape(50),
-        color = Color(0xFFE8E8E8),
-        contentColor = Color.Black,
+        shape = deskposeDefaultShape,
+        color = deskposeSurfaceColor,
         modifier = modifier
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 5.dp),
+                .buttonPadding(),
+            content = content
+        )
+    }
+}
+
+@Composable
+fun OutlineButton(
+    caption: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    DeskposeClickable(
+        onClick = onClick,
+        shape = deskposeDefaultShape,
+        border = BorderStroke(width = 2.dp, color = deskposeOutlineColor),
+        modifier = modifier
+    ) {
+        PaddedLabel(caption)
+    }
+}
+
+@Composable
+fun CustomOutlineButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    DeskposeClickable(
+        onClick = onClick,
+        shape = deskposeDefaultShape,
+        border = BorderStroke(width = 2.dp, color = deskposeOutlineColor),
+        modifier = modifier
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .buttonPadding(),
             content = content
         )
     }
@@ -139,17 +197,11 @@ fun CustomButton(
 fun TextButton(caption: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     DeskposeClickable(
         onClick = onClick,
-        shape = RoundedCornerShape(50),
+        shape = deskposeDefaultShape,
         color = Color.Transparent,
-        contentColor = Color.Black,
         modifier = modifier
     ) {
-        Text(
-            text = caption,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 5.dp)
-        )
+        PaddedLabel(caption)
     }
 }
 
@@ -157,15 +209,14 @@ fun TextButton(caption: String, onClick: () -> Unit, modifier: Modifier = Modifi
 fun CustomTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
     DeskposeClickable(
         onClick = onClick,
-        shape = RoundedCornerShape(50),
+        shape = deskposeDefaultShape,
         color = Color.Transparent,
-        contentColor = Color.Black,
         modifier = modifier
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 5.dp),
+                .buttonPadding(),
             content = content
         )
     }
@@ -175,10 +226,10 @@ fun CustomTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, content
 fun TextField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val borderColor by animateColorAsState(if (isFocused) Color(0xFF808080) else Color(0xFFE8E8E8))
+    val color by animateColorAsState(if (isFocused) deskposeFocusedSurfaceColor else deskposeUnfocusedSurfaceColor)
     DeskposeUnclickable(
-        shape = RoundedCornerShape(50),
-        border = BorderStroke(width = 1.dp, color = borderColor),
+        shape = deskposeDefaultShape,
+        color = color,
     ) {
         BasicTextField(
             value = value,
@@ -194,58 +245,86 @@ fun TextField(value: String, onValueChange: (String) -> Unit, modifier: Modifier
 }
 
 @Composable
-private fun DeskposeBooleanButton(
+fun OutlineTextField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val borderColor by animateColorAsState(if (isFocused) deskposeFocusedOutlineColor else deskposeUnfocusedOutlineColor)
+    DeskposeUnclickable(
+        shape = deskposeDefaultShape,
+        border = BorderStroke(width = 2.dp, color = borderColor),
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            interactionSource = interactionSource,
+            textStyle = TextStyle(
+                fontSize = 14.sp,
+            ),
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 5.dp)
+        )
+    }
+}
+
+private val deskposeStatefulTextButtonIconWidth = 16f
+
+@Composable
+private fun DeskposeStatefulTextButton(
     caption: String,
-    selected: Boolean,
     onClick: () -> Unit,
-    shape: Shape = RoundedCornerShape(50),
     modifier: Modifier = Modifier,
-    graphic: DrawScope.(Float, Color) -> Unit
+    graphic: DrawScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val dotColor by animateColorAsState(if (selected) Color.Black else Color.Transparent)
+    val iconWidth = deskposeStatefulTextButtonIconWidth
     DeskposeClickable(
         onClick = onClick,
         interactionSource = interactionSource,
-        shape = shape,
+        shape = deskposeDefaultShape,
         modifier = modifier
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(horizontal = 6.dp, vertical = 4.dp)
+                .buttonPadding()
         ) {
-            Canvas(Modifier.size(16.dp)) {
-                this@Canvas.graphic(8f, dotColor)
+            Canvas(
+                modifier = Modifier
+                    .size(iconWidth.dp)
+            ) {
+                this@Canvas.graphic()
             }
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = caption,
-                fontSize = 14.sp
-            )
+            Spacer(Modifier.width(8.dp))
+            Label(caption)
         }
     }
 }
 
 @Composable
 fun RadioButton(caption: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    DeskposeBooleanButton(caption, selected, onClick, modifier = modifier) { radius, activeColor ->
+    val dotColor by animateColorAsState(if (selected) Color.Black else Color.Transparent)
+    val iconWidth = deskposeStatefulTextButtonIconWidth
+    DeskposeStatefulTextButton(
+        caption = caption,
+        onClick = onClick,
+        modifier = modifier
+    ) {
         drawCircle(
-            color = Color(0xFFD0D0D0),
-            radius = radius,
+            color = deskposeSmallSurfaceColor,
+            radius = iconWidth / 2,
             center = Offset(8f, 8f),
-            style = Stroke(width = 2f)
+            style = Fill
         )
         drawCircle(
-            color = activeColor,
-            radius = radius / 2,
+            color = dotColor,
+            radius = iconWidth / 4,
             center = Offset(8f, 8f),
             style = Fill
         )
     }
 }
 
-private fun deskposeCheckButtonTickPath(origin: Float, radius: Float) = Path().run {
+private fun deskposeCheckButtonTickPath(origin: Float = 4f, radius: Float = 4f) = Path().run {
     val arg1 = 1f
     val arg2 = 1f
     moveTo(origin, origin + arg1 * radius)
@@ -256,27 +335,22 @@ private fun deskposeCheckButtonTickPath(origin: Float, radius: Float) = Path().r
 
 @Composable
 fun CheckButton(caption: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    DeskposeBooleanButton(
-        caption,
-        selected,
-        onClick,
-        RoundedCornerShape(
-            topStartPercent = 20,
-            bottomStartPercent = 20,
-            topEndPercent = 50,
-            bottomEndPercent = 50
-        ),
-        modifier
-    ) { radius, activeColor ->
+    val dotColor by animateColorAsState(if (selected) Color.Black else Color.Transparent)
+    val iconWidth = deskposeStatefulTextButtonIconWidth
+    DeskposeStatefulTextButton(
+        caption = caption,
+        onClick = onClick,
+        modifier = modifier
+    ) {
         drawRect(
-            color = Color(0xFFD0D0D0),
+            color = deskposeSmallSurfaceColor,
             topLeft = Offset.Zero,
-            size = Size(radius * 2, radius * 2),
-            style = Stroke(width = 2f)
+            size = Size(iconWidth, iconWidth),
+            style = Fill
         )
         drawPath(
-            path = deskposeCheckButtonTickPath(4f, radius - 4f),
-            color = activeColor,
+            path = deskposeCheckButtonTickPath(),
+            color = dotColor,
             style = Stroke(width = 2f)
         )
     }
@@ -289,90 +363,84 @@ fun TristateCheckButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     val dotColor by animateColorAsState(
         if (state == ToggleableState.On || state == ToggleableState.Indeterminate)
             Color.Black else Color.Transparent)
-    DeskposeClickable(
+    DeskposeStatefulTextButton(
+        caption = caption,
         onClick = onClick,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(
-            topStartPercent = 20,
-            bottomStartPercent = 20,
-            topEndPercent = 50,
-            bottomEndPercent = 50
-        ),
-        modifier = modifier
+        modifier = modifier,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(horizontal = 6.dp, vertical = 4.dp)
-        ) {
-            Canvas(Modifier.size(16.dp)) {
-                drawRect(
-                    color = Color(0xFFD0D0D0),
-                    topLeft = Offset.Zero,
-                    size = Size(16f, 16f),
-                    style = Stroke(width = 2f)
-                )
-                if (state == ToggleableState.On) {
-                    drawPath(
-                        path = deskposeCheckButtonTickPath(4f, 4f),
-                        color = dotColor,
-                        style = Stroke(width = 2f)
-                    )
-                }
-                if (state == ToggleableState.Indeterminate) {
-                    drawRect(
-                        topLeft = Offset(4f, 4f),
-                        size = Size(8f, 8f),
-                        color = dotColor,
-                        style = Fill
-                    )
-                }
-            }
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = caption,
-                fontSize = 14.sp
+        drawRect(
+            color = deskposeSmallSurfaceColor,
+            topLeft = Offset.Zero,
+            size = Size(16f, 16f),
+            style = Fill
+        )
+        if (state == ToggleableState.On) {
+            drawPath(
+                path = deskposeCheckButtonTickPath(4f, 4f),
+                color = dotColor,
+                style = Stroke(width = 2f)
+            )
+        }
+        if (state == ToggleableState.Indeterminate) {
+            drawRect(
+                topLeft = Offset(4f, 4f),
+                size = Size(8f, 8f),
+                color = dotColor,
+                style = Fill
             )
         }
     }
+}
+
+private val deskposeComboButtonDropdownArrowPath = deskposeStaticPath {
+    moveTo(0f, 0f)
+    lineTo(5f, 5f)
+    lineTo(10f, 0f)
 }
 
 @Composable
 fun ComboButton(items: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     var isPopping by remember { mutableStateOf(false) }
     val ratio by animateFloatAsState(if (isPopping) 1f else 0f)
+    val color by animateColorAsState(if (isPopping) deskposeFocusedSurfaceColor else deskposeSurfaceColor)
     DeskposeUnclickable(
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(2.dp, Color(0xFFD0D0D0)),
-        contentColor = Color.Black,
+        color = deskposeUnfocusedSurfaceColor,
         modifier = modifier
     ) {
         Column {
             DeskposeClickable(
+                color = color,
+                shape = deskposeDefaultShape,
                 onClick = {
                     isPopping = !isPopping
                 }
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = items[selectedIndex],
-                        fontSize = 14.sp,
+                    PaddedLabel(items[selectedIndex])
+                    Box(
                         modifier = Modifier
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "dropdown indicator",
-                        modifier = Modifier
-                            .padding(horizontal = 5.dp)
-                            .rotate(ratio * 180f)
-                    )
+                            .size(20.dp)
+                            .padding(end = 10.dp)
+                    ) {
+                        Canvas(
+                            modifier = Modifier
+                                .size(width = 10.dp, height = 5.dp)
+                                .rotate(ratio * 180f)
+                                .align(Alignment.Center)
+                        ) {
+                            drawPath(
+                                path = deskposeComboButtonDropdownArrowPath,
+                                color = Color(0xFF808080),
+                                style = Stroke(2f)
+                            )
+                        }
+                    }
                 }
             }
             AnimatedVisibility(visible = isPopping) {
@@ -386,12 +454,7 @@ fun ComboButton(items: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit
                             shape = RoundedCornerShape(12.dp),
                             color = Color.Transparent
                         ) {
-                            Text(
-                                text = items[it],
-                                fontSize = 14.sp,
-                                modifier = Modifier
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
+                            PaddedLabel(items[it])
                         }
                     }
                 }
@@ -402,22 +465,22 @@ fun ComboButton(items: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit
 
 @Composable
 fun HintDot(activated: Boolean, color: Color, caption: String) {
-    val mainColor by animateColorAsState(if (activated) color else Color(0xFF808080))
+    val mainColor by animateColorAsState(if (activated) color else deskposeTinySurfaceColor)
     val ratio by animateFloatAsState(if (activated) 1f else 0f)
     val stroke by animateDpAsState(if (activated) 2.dp else 5.dp)
     DeskposeUnclickable(
-        shape = RoundedCornerShape(50),
+        shape = deskposeDefaultShape,
         border = BorderStroke(stroke, mainColor),
         modifier = Modifier
             .padding(start = ((1 - ratio) * 6f).dp)
             .defaultMinSize(10.dp, 10.dp)
     ) {
         AnimatedVisibility(visible = activated) {
-            Text(
-                text = caption,
-                fontSize = 14.sp,
+            Label(
+                caption = caption,
+                style = tipTextStyle,
                 modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
             )
         }
     }
@@ -437,7 +500,7 @@ fun Slider(value: Float, width: Dp = 150.dp, height: Dp = 20.dp, knobWidth: Dp =
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val isHovered by interactionSource.collectIsHoveredAsState()
-    val knobColor by animateColorAsState(if (isFocused || isHovered) Color(0xFFD0D0D0) else Color(0xFFE8E8E8))
+    val knobColor by animateColorAsState(if (isFocused || isHovered) deskposeFocusedSmallSurfaceColor else deskposeUnfocusedSmallSurfaceColor)
     Box(
         modifier = Modifier
             .size(width = width, height = height)
@@ -447,7 +510,7 @@ fun Slider(value: Float, width: Dp = 150.dp, height: Dp = 20.dp, knobWidth: Dp =
                 .size(width = width, height = height),
         ) {
             drawLine(
-                color = Color(0xFFA0A0A0),
+                color = deskposeOutlineColor,
                 start = Offset(height.value / 2, height.value / 2),
                 end = Offset(width.value - height.value / 2, height.value / 2),
                 strokeWidth = 2f
@@ -481,14 +544,14 @@ fun Slider(value: Float, width: Dp = 150.dp, height: Dp = 20.dp, knobWidth: Dp =
 @Composable
 fun ProgressBar(value: Float, modifier: Modifier = Modifier.width(150.dp)) {
     DeskposeUnclickable(
-        shape = RoundedCornerShape(50),
-        color = Color(0xFFF0F0F0),
+        shape = deskposeDefaultShape,
+        color = deskposeUnfocusedSmallSurfaceColor,
         modifier = Modifier
             .height(10.dp)
             .then(modifier)
     ) {
         DeskposeUnclickable(
-            color = Color(0xFFA0A0A0),
+            color = deskposeSelectedSmallSurfaceColor,
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(value)
@@ -502,27 +565,19 @@ fun TabView(selected: Int, onSelect: (Int) -> Unit, captions: List<String>, modi
         modifier = modifier
     ) {
         DeskposeUnclickable(
-            shape = RoundedCornerShape(50),
-            border = BorderStroke(width = 2.dp, color = Color(0xFFE0E0E0)),
+            shape = deskposeDefaultShape,
             modifier = Modifier.padding(5.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 captions.indices.forEach {
-                    val contentColor by animateColorAsState(if (selected == it) Color.Black else Color(0xFF808080))
-                    val color by animateColorAsState(if (selected == it) Color(0xFFE0E0E0) else Color.White)
+                    val color by animateColorAsState(if (selected == it) deskposeSelectedSurfaceColor else deskposeUnfocusedSurfaceColor)
                     DeskposeClickable(
                         onClick = { onSelect(it) },
-                        color = color,
-                        contentColor = contentColor
+                        color = color
                     ) {
-                        Text(
-                            text = captions[it],
-                            fontSize = 14.sp,
-                            modifier = Modifier
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
+                        PaddedLabel(captions[it])
                     }
                 }
             }
@@ -533,50 +588,44 @@ fun TabView(selected: Int, onSelect: (Int) -> Unit, captions: List<String>, modi
     }
 }
 
+private val deskposeBackArrowPath = deskposeStaticPath {
+    moveTo(7.5f, 0f)
+    lineTo(0f, 7.5f)
+    lineTo(7.5f, 15f)
+    moveTo(1f, 7.5f)
+    lineTo(15f, 7.5f)
+}
+
 @Composable
 private fun DeskposeBackArrow(color: Color = Color.Black) {
     Canvas(
         modifier = Modifier
             .size(15.dp)
     ) {
-        drawLine(
-            color = color,
-            start = Offset(7.5f, 0f),
-            end = Offset(0f, 7.5f),
-            strokeWidth = 2f
-        )
-        drawLine(
-            color = color,
-            start = Offset(0f, 7.5f),
-            end = Offset(7.5f, 15f),
-            strokeWidth = 2f
-        )
-        drawLine(
-            color = color,
-            start = Offset(1f, 7.5f),
-            end = Offset(15f, 7.5f),
-            strokeWidth = 2f
+        drawPath(
+            path = deskposeBackArrowPath,
+            color = Color.Black,
+            style = Stroke(2f)
         )
     }
 }
 
+private val deskposeRightArrowPath = deskposeStaticPath {
+    moveTo(0f, 0f)
+    lineTo(5f, 5f)
+    lineTo(0f, 10f)
+}
+
 @Composable
-private fun DeskposeRightArrow(color: Color = Color.Black) {
+private fun DeskposeRightArrow() {
     Canvas(
         modifier = Modifier
             .size(width = 5.dp, height = 10.dp)
     ) {
-        drawLine(
-            color = color,
-            start = Offset(0f, 0f),
-            end = Offset(5f, 5f),
-            strokeWidth = 2f
-        )
-        drawLine(
-            color = color,
-            start = Offset(5f, 5f),
-            end = Offset(0f, 10f),
-            strokeWidth = 2f
+        drawPath(
+            path = deskposeRightArrowPath,
+            color = deskposeOutlineColor,
+            style = Stroke(2f)
         )
     }
 }
@@ -597,14 +646,14 @@ fun BreadcrumbBar(items: List<String>, onClick: (Int) -> Unit, modifier: Modifie
             )
             Spacer(Modifier.width(5.dp))
             if (it != items.size - 1) {
-                DeskposeRightArrow(color = Color(0xFFD0D0D0))
+                DeskposeRightArrow()
                 Spacer(Modifier.width(5.dp))
             }
         }
     }
 }
 
-class FilteredTreeItem(val caption: String, val itemIndex: Int? = null)
+private class FilteredTreeItem(val caption: String, val itemIndex: Int? = null)
 
 private fun filterTreeItems(cur: List<String>, paths: List<List<String>>): List<FilteredTreeItem> {
     var list = paths.withIndex()
@@ -640,8 +689,8 @@ fun TreeNavigationView(paths: List<List<String>>, modifier: Modifier = Modifier,
             AnimatedVisibility(visible = currentPath.size != 0) {
                 DeskposeClickable(
                     onClick = { currentPath.removeLast() },
-                    shape = CircleShape,
-                    color = Color(0xFFF0F0F0),
+                    shape = deskposeDefaultShape,
+                    color = deskposeSurfaceColor,
                     modifier = Modifier
                         .padding(top = 5.dp, start = 5.dp)
                 ) {
@@ -662,18 +711,13 @@ fun TreeNavigationView(paths: List<List<String>>, modifier: Modifier = Modifier,
             items.forEach {
                 if (it.itemIndex != null) {
                     DeskposeClickable(
-                        shape = RoundedCornerShape(50),
-                        color = if (currentPage == it.itemIndex) Color(0xFFF8F8F8) else Color.White,
+                        shape = deskposeDefaultShape,
+                        color = if (currentPage == it.itemIndex) deskposeSelectedSurfaceColor else Color.White,
                         onClick = { currentPage = it.itemIndex },
                         modifier = Modifier
                             .padding(start = 5.dp, top = 5.dp)
                     ) {
-                        Text(
-                            text = it.caption,
-                            fontWeight = if (currentPage == it.itemIndex) FontWeight.SemiBold else FontWeight.Normal,
-                            modifier = Modifier
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
+                        PaddedLabel(it.caption)
                     }
                 } else {
                     DeskposeClickable(
@@ -685,11 +729,7 @@ fun TreeNavigationView(paths: List<List<String>>, modifier: Modifier = Modifier,
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = it.caption,
-                                modifier = Modifier
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            )
+                            PaddedLabel(it.caption)
                             DeskposeRightArrow()
                             Spacer(Modifier.width(10.dp))
                         }
@@ -704,4 +744,44 @@ fun TreeNavigationView(paths: List<List<String>>, modifier: Modifier = Modifier,
                 .fillMaxSize()
         ) { content(currentPage) }
     }
+}
+
+@Composable
+fun Label(
+    caption: String,
+    style: TextStyle = labelTextStyle,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    overflow: TextOverflow = TextOverflow.Ellipsis,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE,
+    modifier: Modifier = Modifier,
+) {
+    BasicText(
+        text = caption,
+        style = style,
+        onTextLayout = onTextLayout,
+        overflow = overflow,
+        minLines = minLines,
+        maxLines = maxLines,
+        modifier = modifier
+    )
+}
+
+private fun Modifier.buttonPadding(extra: Dp = 0.dp) = this
+    .padding(horizontal = 10.dp + extra, vertical = 5.dp + extra)
+
+@Composable
+fun PaddedLabel(
+    caption: String,
+    style: TextStyle = labelTextStyle,
+    modifier: Modifier = Modifier
+) {
+    Label(
+        caption = caption,
+        style = style,
+        maxLines = 1,
+        modifier = Modifier
+            .buttonPadding()
+            .then(modifier)
+    )
 }
